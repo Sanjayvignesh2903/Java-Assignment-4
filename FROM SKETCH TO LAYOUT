@@ -1,0 +1,81 @@
+import javax.swing.*;
+import java.awt.*;
+
+public class LibrarySearchFrame extends JFrame {
+    private final JTextField searchField = new JTextField(20);
+    private final JComboBox<String> categoryBox = new JComboBox<>(
+            new String[]{"All Categories", "Computer Science", "Mathematics", "Physics", "Literature"}
+    );
+    private final JButton searchButton = new JButton("Search");
+    private final JTextArea resultsArea = new JTextArea();
+    private final JButton prevButton = new JButton("Prev");
+    private final JButton nextButton = new JButton("Next");
+    private final JButton reserveButton = new JButton("Reserve");
+    private final JLabel statusLabel = new JLabel("Ready");
+
+    public LibrarySearchFrame() {
+        setTitle("Campus Library Search");
+        setSize(600, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout(8, 8));
+
+        // Top Panel: Title + Search Row
+        JPanel topPanel = new JPanel(new BorderLayout(5, 5));
+        JLabel titleLabel = new JLabel("Campus Library Search", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 4, 0));
+
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 5));
+        searchPanel.add(new JLabel("Query:"));
+        searchPanel.add(searchField);
+        searchPanel.add(categoryBox);
+        searchPanel.add(searchButton);
+
+        topPanel.add(titleLabel, BorderLayout.NORTH);
+        topPanel.add(searchPanel, BorderLayout.CENTER);
+
+        // Center: Results Area (grows when window is resized)
+        resultsArea.setEditable(false);
+        resultsArea.setText("Enter a keyword and click Search to view library books...");
+        JScrollPane resultsScrollPane = new JScrollPane(resultsArea);
+        resultsScrollPane.setBorder(BorderFactory.createTitledBorder("Search Results"));
+
+        // Bottom Panel: Buttons + Status Message
+        JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        buttonPanel.add(prevButton);
+        buttonPanel.add(nextButton);
+        buttonPanel.add(reserveButton);
+
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(4, 10, 6, 10));
+
+        bottomPanel.add(buttonPanel, BorderLayout.NORTH);
+        bottomPanel.add(statusLabel, BorderLayout.SOUTH);
+
+        add(topPanel, BorderLayout.NORTH);
+        add(resultsScrollPane, BorderLayout.CENTER);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        // Button Actions
+        searchButton.addActionListener(e -> {
+            String query = searchField.getText().trim();
+            String cat = (String) categoryBox.getSelectedItem();
+            resultsArea.setText("Showing results for \"" + query + "\" in [" + cat + "]:\n"
+                    + "1. Clean Code - Robert C. Martin\n"
+                    + "2. Effective Java - Joshua Bloch\n"
+                    + "3. Introduction to Algorithms - CLRS");
+            statusLabel.setText("Found 3 books in " + cat);
+        });
+
+        prevButton.addActionListener(e -> statusLabel.setText("Viewing previous page."));
+        nextButton.addActionListener(e -> statusLabel.setText("Viewing next page."));
+        reserveButton.addActionListener(e -> statusLabel.setText("Selected book reserved."));
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            LibrarySearchFrame frame = new LibrarySearchFrame();
+            frame.setVisible(true);
+        });
+    }
+}
