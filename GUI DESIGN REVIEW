@@ -1,0 +1,145 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+// Backend logic class (package-private so it fits in the same file)
+class FeeService {
+    private static final String URL = "jdbc:mysql://localhost:3306/college_db";
+    private static final String USER = "root";
+    private static final String PWD = "password";
+
+    public String processPayment(String regNo, String amountText) throws Exception {
+        // 1. Validate inputs
+        if (regNo == null || regNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("Register number cannot be empty.");
+        }
+
+        double amount;
+        try {
+            amount = Double.parseDouble(amountText.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Amount must be a valid number.");
+        }
+
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than zero.");
+        }
+
+        // 2. Secure SQL using PreparedStatement and try-with-resources
+        String sql = "INSERT INTO fees (reg_no, amount) VALUES (?, ?)";
+        try (Connection c = DriverManager.getConnection(URL, USER, PWD);
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setString(1, regNo.trim());
+            ps.setDouble(2, amount);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new Exception("Database error: " + e.getMessage(), e);
+        }
+
+        // 3. Simulate bank confirmation
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Payment confirmation was interrupted.");
+        }
+
+        return "Payment of Rs. " + amount + " successful for " + regNo.trim();
+    }
+
+    public String generateReceipt(String regNo, String amountText) {
+        if (regNo == null || regNo.trim().isEmpty()) {
+            return "Enter a Register Number to view receipt.";
+        }
+        return "Receipt -> RegNo: " + regNo.trim() + " | Amount: Rs. " + amountText.trim();
+    }
+}
+
+// GUI and Event Handling class
+public class FeeWindow extends Frame {
+    private final TextField regNo = new TextField(15);
+    private final TextField amount = new TextField(15);
+    private final Button pay = new Button("Pay");
+    private final Button clear = new Button("Clear");
+    private final Button receipt = new Button("Receipt");
+    private final Label statusLabel = new Label("Ready                                        ");
+
+    private final FeeService feeService;
+
+    public FeeWindow(FeeService feeService) {
+        this.feeService = feeService;
+
+        setTitle("Student Fee Payment");
+        setLayout(new FlowLayout());
+        setSize(350, 200);
+
+        add(new Label("Reg No:"));
+        add(regNo);
+        add(new Label("Amount:"));
+        add(amount);
+        add(pay);
+        add(clear);
+        add(receipt);
+        add(statusLabel);
+
+        // Separate listeners for each button
+        pay.addActionListener(e -> handlePay());
+        clear.addActionListener(e -> handleClear());
+        receipt.addActionListener(e -> handleReceipt());
+
+        // Proper window closing
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                dispose();
+                System.exit(0);
+            }
+        });
+    }
+
+    private void handlePay() {
+        String reg = regNo.getText();
+        String amt = amount.getText();
+
+        pay.setEnabled(false);
+        statusLabel.setText("Processing payment...");
+
+        // Run DB work and sleep() off the Event Dispatch Thread (EDT)
+        new Thread(() -> {
+            try {
+                String message = feeService.processPayment(reg, amt);
+                EventQueue.invokeLater(() -> {
+                    statusLabel.setText(message);
+                    pay.setEnabled(true);
+                });
+            } catch (Exception ex) {
+                EventQueue.invokeLater(() -> {
+                    statusLabel.setText("Error: " + ex.getMessage());
+                    pay.setEnabled(true);
+                });
+            }
+        }).start();
+    }
+
+    private void handleClear() {
+        regNo.setText("");
+        amount.setText("");
+        statusLabel.setText("Cleared.");
+    }
+
+    private void handleReceipt() {
+        String receiptText = feeService.generateReceipt(regNo.getText(), amount.getText());
+        statusLabel.setText(receiptText);
+    }
+
+    public static void main(String[] args) {
+        EventQueue.invokeLater(() -> {
+            FeeWindow window = new FeeWindow(new FeeService());
+            window.setVisible(true);
+        });
+    }
+}
